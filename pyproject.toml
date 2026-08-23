@@ -60,6 +60,7 @@ ignore = [
     "ISC001",
     "CPY001",
     "T201",
+    "INP001",
 ]
 
 [tool.ruff.lint.pydocstyle]
