@@ -7,9 +7,9 @@ UI (print) から分離されたため、戻り値や例外の送出を
 フィクスチャによる状態のリセットは引き続き必要です。
 """
 
-import data_access  # ty: ignore[unresolved-import]
+import data_access
 import pytest
-import service  # ty: ignore[unresolved-import]
+import service
 
 
 class TestGetProductsList:
@@ -118,8 +118,12 @@ class TestPlaceOrder:
         # 副作用(データ更新)の検証
         orders = data_access.get_all_orders()
         assert len(orders) == 1
-        assert data_access.get_product("P001")["stock"] == 8
-        assert data_access.get_product("P002")["stock"] == 4
+        p1 = data_access.get_product("P001")
+        assert p1 is not None
+        assert p1["stock"] == 8
+        p2 = data_access.get_product("P002")
+        assert p2 is not None
+        assert p2["stock"] == 4
         assert data_access.get_cart("user1") == []
 
     def test_rejects_order_with_insufficient_stock(self) -> None:

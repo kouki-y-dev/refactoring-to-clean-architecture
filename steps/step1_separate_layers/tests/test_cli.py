@@ -4,9 +4,9 @@
 UI に特化したテストのため、主に標準出力の内容を検証します。
 """
 
-import cli  # ty: ignore[unresolved-import]
+import cli
 import pytest  # noqa: TC002
-import service  # ty: ignore[unresolved-import]
+import service
 from pytest_mock import MockerFixture  # noqa: TC002
 
 

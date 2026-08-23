@@ -15,7 +15,7 @@ sys.path.insert(
 @pytest.fixture(autouse=True)
 def _reset_global_state() -> None:
     """グローバル状態を初期値にリセットする."""
-    import data_access  # ty: ignore[unresolved-import]
+    import data_access
 
     data_access.products.clear()
     data_access.products.update(

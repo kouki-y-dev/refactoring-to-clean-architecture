@@ -22,7 +22,7 @@
      ため、常に統合テストのようになる。
 """
 
-import main  # ty: ignore[unresolved-import]
+import main
 import pytest
 
 
