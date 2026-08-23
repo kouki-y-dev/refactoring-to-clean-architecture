@@ -167,3 +167,49 @@ class TestViewOrderHistory:
         captured = capsys.readouterr()
 
         assert "注文履歴はありません" in captured.out
+
+
+class TestMainMenu:
+    """メインメニュー表示と操作のテスト."""
+
+    def test_main_menu_interactions(
+        self, mocker: MockerFixture, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """メニューからの各種操作が正しく呼び出されること."""
+        # 操作のシナリオ:
+        # 1. 商品一覧 (1)
+        # 2. カートに追加 (2 -> P001 -> 1)
+        # 3. カートから削除 (3 -> P001)
+        # 4. カート表示 (4)
+        # 5. 無効な選択 (99)
+        # 6. 注文確定 (5) -> カート空で失敗
+        # 7. 注文履歴 (6)
+        # 8. 終了 (0)
+        mocker.patch(
+            "builtins.input",
+            side_effect=[
+                "1",
+                "2",
+                "P001",
+                "1",
+                "3",
+                "P001",
+                "4",
+                "99",
+                "5",
+                "6",
+                "0",
+            ],
+        )
+
+        cli.main_menu()
+        captured = capsys.readouterr()
+
+        assert "=== 商品一覧 ===" in captured.out
+        assert "カートに追加/更新しました" in captured.out
+        assert "カートから削除しました" in captured.out
+        assert "カートは空です" in captured.out
+        assert "無効な選択です" in captured.out
+        assert "エラー: カートが空です" in captured.out
+        assert "注文履歴はありません" in captured.out
+        assert "終了します" in captured.out

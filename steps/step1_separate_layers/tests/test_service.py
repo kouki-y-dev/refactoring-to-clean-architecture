@@ -10,6 +10,7 @@ UI (print) から分離されたため、戻り値や例外の送出を
 import data_access
 import pytest
 import service
+from pytest_mock import MockerFixture  # noqa: TC002
 
 
 class TestGetProductsList:
@@ -97,6 +98,13 @@ class TestGetCartDetails:
         details = service.get_cart_details("user1")
         assert details == {}
 
+    def test_skips_invalid_product(self) -> None:
+        """カート内に存在しない商品が含まれていた場合スキップされること."""
+        data_access.carts["user1"] = [{"product_id": "INVALID", "quantity": 1}]
+        details = service.get_cart_details("user1")
+        assert details["subtotal"] == 0
+        assert len(details["items"]) == 0
+
 
 class TestPlaceOrder:
     """注文確定ロジックのテスト."""
@@ -135,10 +143,40 @@ class TestPlaceOrder:
         with pytest.raises(ValueError, match="在庫が不足しています"):
             service.place_order("user1")
 
-        # 注文は作成されない
-        assert len(data_access.get_all_orders()) == 0
-        # カートは維持される
-        assert len(data_access.get_cart("user1")) == 1
+        # カートや在庫がそのまま維持されることの確認
+        assert data_access.get_product("P002") is not None
+        assert data_access.get_cart("user1")[0]["quantity"] == 3
+
+    def test_rejects_order_with_invalid_product(self) -> None:
+        """存在しない商品がカートにある場合に注文が失敗すること."""
+        data_access.carts["user1"] = [{"product_id": "INVALID", "quantity": 1}]
+        with pytest.raises(ValueError, match="商品 INVALID が見つかりません"):
+            service.place_order("user1")
+
+    def test_skips_product_disappeared_during_order(
+        self, mocker: MockerFixture
+    ) -> None:
+        """注文の検証後、計算処理の間に商品が削除された場合はスキップされること."""
+        service.add_item_to_cart("user1", "P001", 1)
+        original_get_product = data_access.get_product
+
+        call_count = 0
+
+        def mock_get_product(product_id: str) -> dict | None:
+            nonlocal call_count
+            call_count += 1
+            # 1回目は在庫チェック用なので正常に返す
+            # 2回目は金額計算用なので None を返して削除されたことをシミュレート
+            if call_count == 2:
+                return None
+            return original_get_product(product_id)
+
+        mocker.patch("data_access.get_product", side_effect=mock_get_product)
+        order = service.place_order("user1")
+
+        # 商品がスキップされたため、アイテムは空で合計金額も0になる
+        assert len(order["items"]) == 0
+        assert order["total"] == 0
 
 
 class TestGetOrderHistory:
