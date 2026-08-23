@@ -120,3 +120,9 @@ addopts = [
 env = [
     "TZ = Asia/Tokyo",
 ]
+
+[tool.ty.environment]
+extra-paths = [
+    "steps/step0_monolith/src",
+    "steps/step1_separate_layers/src",
+]
