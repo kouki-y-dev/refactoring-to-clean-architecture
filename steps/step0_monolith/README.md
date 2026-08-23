@@ -1,6 +1,6 @@
-# Step 0: Monolith (モノリスな初期状態)
+# Step 0: Monolith
 
-## 概要 (Overview)
+## Overview
 
 EC サイトの注文システム（商品一覧、カート操作、注文確定、履歴参照）の全機能が、`main.py` という**単一のファイルにすべて詰め込まれた状態**です。
 
@@ -17,7 +17,23 @@ steps/step0_monolith/
 
 ---
 
-## コードの解説 (Code Structure)
+## How to Run
+
+### アプリケーションの実行 (CLI)
+
+```bash
+uv run steps/step0_monolith/src/main.py
+```
+
+### テストの実行
+
+```bash
+uv run poe test-step steps/step0_monolith/tests
+```
+
+---
+
+## Code Structure
 
 - **データ層**: モジュールレベルのグローバル変数 (`products`, `carts`, `orders`) にインメモリの辞書（`dict`）として保持。
 - **ロジック & UI**: 各関数 (`list_products`, `add_to_cart`, `place_order` など) が、辞書の直接読み書き・ビジネスロジックの計算・`print()` による画面出力を同時に行う。
@@ -25,7 +41,7 @@ steps/step0_monolith/
 
 ---
 
-## 現状のコードが抱える問題点 (Problems & Challenges)
+## Problems & Challenges
 
 ### 1. 1か所の変更があらゆるところに影響する（密結合・変更容易性の欠如）
 - カートや注文のデータ構造（辞書のキー名など）を少し変えただけで、すべての関数を修正する必要があります。
@@ -67,6 +83,6 @@ steps/step0_monolith/
 
 ---
 
-## 次のステップへの展望 (Next Steps)
+## Next Steps
 
 次の **Step 1: Separate Layers** では、まずこの「ごちゃ混ぜになった責務」を解きほぐし、**UI（表示）・ビジネスロジック・データアクセス**の3つの関心事に分割（関心の分離）していきます。
