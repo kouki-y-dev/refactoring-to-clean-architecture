@@ -4,10 +4,14 @@
 UI に特化したテストのため、主に標準出力の内容を検証します。
 """
 
+from typing import TYPE_CHECKING
+
 import cli
-import pytest  # noqa: TC002
 import service
-from pytest_mock import MockerFixture  # noqa: TC002
+
+if TYPE_CHECKING:
+    import pytest
+    from pytest_mock import MockerFixture
 
 
 class TestListProducts:

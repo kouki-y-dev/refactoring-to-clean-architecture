@@ -7,10 +7,14 @@ UI (print) から分離されたため、戻り値や例外の送出を
 フィクスチャによる状態のリセットは引き続き必要です。
 """
 
+from typing import TYPE_CHECKING
+
 import data_access
 import pytest
 import service
-from pytest_mock import MockerFixture  # noqa: TC002
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 class TestGetProductsList:
