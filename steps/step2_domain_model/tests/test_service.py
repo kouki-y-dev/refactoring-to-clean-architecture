@@ -1,0 +1,213 @@
+"""Step 2: サービス層 (Service Layer) のテスト.
+
+ビジネスロジック (service.py) を直接テストします。
+Step 1 との主な違いは、戻り値が辞書ではなくドメインモデルとなり、
+属性アクセスで検証する点です。
+"""
+
+from typing import TYPE_CHECKING
+
+import data_access
+import pytest
+import service
+from domain.entity import CartItem
+
+if TYPE_CHECKING:
+    from domain.entity import Product
+    from pytest_mock import MockerFixture
+
+
+class TestGetProductsList:
+    """商品一覧取得ロジックのテスト."""
+
+    def test_returns_all_products(self) -> None:
+        """全ての商品が返されること."""
+        products = service.get_products_list()
+        assert len(products) == 3
+        assert "P001" in products
+        assert products["P001"].name == "Tシャツ"
+
+
+class TestAddToCart:
+    """カート追加ロジックのテスト."""
+
+    def test_adds_item_to_cart(self) -> None:
+        """商品がカートに追加されること."""
+        service.add_item_to_cart("user1", "P001", 2)
+        cart = data_access.get_cart("user1")
+        assert len(cart.items) == 1
+        assert cart.items[0].product_id == "P001"
+        assert cart.items[0].quantity == 2
+
+    def test_increases_quantity_for_existing_item(self) -> None:
+        """同じ商品を追加すると数量が加算されること."""
+        service.add_item_to_cart("user1", "P001", 2)
+        service.add_item_to_cart("user1", "P001", 3)
+        cart = data_access.get_cart("user1")
+        assert len(cart.items) == 1
+        assert cart.items[0].quantity == 5
+
+    def test_rejects_nonexistent_product(self) -> None:
+        """存在しない商品IDの場合、ValueErrorがスローされること."""
+        with pytest.raises(ValueError, match="見つかりません"):
+            service.add_item_to_cart("user1", "P999", 1)
+
+    def test_rejects_insufficient_stock(self) -> None:
+        """在庫不足の場合、ValueErrorがスローされること."""
+        with pytest.raises(ValueError, match="在庫が不足しています"):
+            service.add_item_to_cart("user1", "P002", 100)
+
+
+class TestRemoveFromCart:
+    """カート削除ロジックのテスト."""
+
+    def test_removes_item_from_cart(self) -> None:
+        """カートから商品が削除されること."""
+        service.add_item_to_cart("user1", "P001", 1)
+        service.add_item_to_cart("user1", "P002", 2)
+        service.remove_item_from_cart("user1", "P001")
+        cart = data_access.get_cart("user1")
+        assert len(cart.items) == 1
+        assert cart.items[0].product_id == "P002"
+
+    def test_rejects_empty_cart(self) -> None:
+        """空カートから削除しようとするとValueErrorがスローされること."""
+        with pytest.raises(ValueError, match="カートが空です"):
+            service.remove_item_from_cart("user1", "P001")
+
+    def test_rejects_nonexistent_item(self) -> None:
+        """カートにない商品を削除しようとするとValueErrorがスローされること."""
+        service.add_item_to_cart("user1", "P001", 1)
+        with pytest.raises(ValueError, match="カートにありません"):
+            service.remove_item_from_cart("user1", "P999")
+
+
+class TestGetCartDetails:
+    """カート詳細取得ロジックのテスト."""
+
+    def test_calculates_totals_correctly(self) -> None:
+        """カート内容と金額(小計・消費税・合計)が正しく計算されること."""
+        service.add_item_to_cart("user1", "P001", 2)  # 2000 * 2 = 4000
+        service.add_item_to_cart("user1", "P003", 3)  # 500 * 3 = 1500
+
+        details = service.get_cart_details("user1")
+
+        assert details is not None
+        assert len(details.items) == 2
+        assert details.subtotal == 5500
+        assert details.tax == 550
+        assert details.total == 6050
+
+    def test_returns_none_for_empty_cart(self) -> None:
+        """空カートの場合は None が返されること."""
+        details = service.get_cart_details("user1")
+        assert details is None
+
+    def test_skips_invalid_product(self) -> None:
+        """カート内に存在しない商品が含まれていた場合スキップされること."""
+        from domain.entity import Cart
+
+        data_access.carts["user1"] = Cart(
+            user_id="user1",
+            items=[CartItem(product_id="INVALID", quantity=1)],
+        )
+        details = service.get_cart_details("user1")
+        assert details is not None
+        assert details.subtotal == 0
+        assert len(details.items) == 0
+
+
+class TestPlaceOrder:
+    """注文確定ロジックのテスト."""
+
+    def test_creates_order_and_updates_stock(self) -> None:
+        """注文作成・在庫減少・カートクリアが正しく行われること."""
+        service.add_item_to_cart("user1", "P001", 2)
+        service.add_item_to_cart("user1", "P002", 1)
+
+        order = service.place_order("user1")
+
+        # 戻り値の検証
+        assert order.user_id == "user1"
+        assert order.subtotal == 5500
+        assert order.tax == 550
+        assert order.total == 6050
+        assert "ORD-" in order.order_id
+
+        # 副作用(データ更新)の検証
+        orders = data_access.get_all_orders()
+        assert len(orders) == 1
+        p1 = data_access.get_product("P001")
+        assert p1 is not None
+        assert p1.stock == 8
+        p2 = data_access.get_product("P002")
+        assert p2 is not None
+        assert p2.stock == 4
+        assert data_access.get_cart("user1").is_empty
+
+    def test_rejects_order_with_insufficient_stock(self) -> None:
+        """在庫不足時に注文が失敗し、副作用が発生しないこと."""
+        service.add_item_to_cart("user1", "P002", 3)
+        # 別のプロセス等で在庫が減った想定
+        data_access.update_product_stock("P002", 4)  # 残り1になる
+
+        with pytest.raises(ValueError, match="在庫が不足しています"):
+            service.place_order("user1")
+
+        # カートや在庫がそのまま維持されることの確認
+        assert data_access.get_product("P002") is not None
+        assert data_access.get_cart("user1").items[0].quantity == 3
+
+    def test_rejects_order_with_invalid_product(self) -> None:
+        """存在しない商品がカートにある場合に注文が失敗すること."""
+        from domain.entity import Cart
+
+        data_access.carts["user1"] = Cart(
+            user_id="user1",
+            items=[CartItem(product_id="INVALID", quantity=1)],
+        )
+        with pytest.raises(ValueError, match="商品 INVALID が見つかりません"):
+            service.place_order("user1")
+
+    def test_skips_product_disappeared_during_order(
+        self, mocker: MockerFixture
+    ) -> None:
+        """注文の検証後、計算処理の間に商品が削除された場合はスキップされること."""
+        service.add_item_to_cart("user1", "P001", 1)
+        original_get_product = data_access.get_product
+
+        call_count = 0
+
+        def mock_get_product(product_id: str) -> Product | None:
+            nonlocal call_count
+            call_count += 1
+            # 1回目は在庫チェック用なので正常に返す
+            # 2回目は金額計算用なので None を返して削除されたことをシミュレート
+            if call_count == 2:
+                return None
+            return original_get_product(product_id)
+
+        mocker.patch("data_access.get_product", side_effect=mock_get_product)
+        order = service.place_order("user1")
+
+        # 商品がスキップされたため、アイテムは空で合計金額も0になる
+        assert len(order.items) == 0
+        assert order.total == 0
+
+
+class TestGetOrderHistory:
+    """注文履歴取得のテスト."""
+
+    def test_returns_order_history(self) -> None:
+        """注文履歴が返されること."""
+        service.add_item_to_cart("user1", "P001", 1)
+        service.place_order("user1")
+
+        history = service.get_order_history("user1")
+        assert len(history) == 1
+        assert history[0].total == 2200
+
+    def test_returns_empty_list_when_no_orders(self) -> None:
+        """注文履歴がない場合は空リストが返されること."""
+        history = service.get_order_history("user1")
+        assert history == []

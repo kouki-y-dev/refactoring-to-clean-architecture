@@ -20,24 +20,48 @@ dev = [
 ]
 
 [tool.poe.tasks]
-test = "python -m pytest steps"
-test-cov = "python -m pytest steps --cov-report=html"
-fmt-ruff = "ruff format"
+fmt-ruff-format = "ruff format"
 fmt-ruff-check = "ruff check --fix"
-fmt = ["fmt-ruff", "fmt-ruff-check"]
+fmt = ["fmt-ruff-format", "fmt-ruff-check"]
+
 lint-ruff = "ruff check"
-lint-ty = "ty check"
+lint-ty = ["lint-ty-step0", "lint-ty-step1", "lint-ty-step2"]
 lint = ["lint-ruff", "lint-ty"]
+
+test-step0 = "pytest steps/step0_monolith/tests"
+test-step1 = "pytest steps/step1_separate_layers/tests"
+test-step2 = "pytest steps/step2_domain_model/tests"
+test = ["test-step0", "test-step1", "test-step2"]
+
 check = ["lint", "test"]
 
+[tool.poe.tasks.lint-ty-step0]
+cmd = "ty check steps/step0_monolith"
+env = { PYTHONPATH = "steps/step0_monolith/src" }
+
+[tool.poe.tasks.lint-ty-step1]
+cmd = "ty check steps/step1_separate_layers"
+env = { PYTHONPATH = "steps/step1_separate_layers/src" }
+
+[tool.poe.tasks.lint-ty-step2]
+cmd = "ty check steps/step2_domain_model"
+env = { PYTHONPATH = "steps/step2_domain_model/src" }
+
 [tool.poe.tasks.test-step]
-cmd = "python -m pytest"
-help = "Run tests for a specific step (e.g., poe test-step steps/step0_monolith/tests)"
+cmd = "pytest"
+help = "Run tests for a specific step"
 
 [[tool.poe.tasks.test-step.args]]
 name = "step_dir"
 positional = true
 required = true
+
+[tool.ty.rules]
+# 本リポジトリは各ステップ（steps/step*）ごとに独立したモジュール構造（同名の service.py や data_access.py の共存）を持っています。
+# プロジェクトルートからエディタ（VS Code等）を開いた際に発生する未解決インポートのエラー表示を抑制するため、
+# ルートレベルでは unresolved-import を ignore に設定しています。
+# 各ステップごとの厳密な型チェックは `uv run poe lint-ty`（または `ty check --project steps/stepX_*`）で実行されます。
+unresolved-import = "ignore"
 
 [tool.ruff]
 target-version = "py314"
@@ -79,6 +103,7 @@ convention = "numpy"
     "D103",
     "D104",
     "ARG",
+    "PGH003",
 ]
 "steps/**/tests/**/*.py" = [
     "S101",
@@ -88,6 +113,7 @@ convention = "numpy"
     "D103",
     "D104",
     "ARG",
+    "PGH003",
 ]
 
 [tool.ruff.format]
@@ -109,8 +135,8 @@ exclude_lines = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["steps"]
 addopts = [
+    "--import-mode=importlib",
     "-s",
     "-vv",
     "--cov=steps",
@@ -119,10 +145,4 @@ addopts = [
 ]
 env = [
     "TZ = Asia/Tokyo",
-]
-
-[tool.ty.environment]
-extra-paths = [
-    "steps/step0_monolith/src",
-    "steps/step1_separate_layers/src",
 ]
