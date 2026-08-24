@@ -7,7 +7,7 @@ Pydantic BaseModel を使用し、型安全性とバリデーションを提供�
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 TAX_RATE = 0.10
 
@@ -167,7 +167,7 @@ class Cart(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class CartDetailItem(BaseModel, frozen=True):
+class CartDetailItem(BaseModel):
     """
     カート詳細の個別アイテム.
 
@@ -191,8 +191,10 @@ class CartDetailItem(BaseModel, frozen=True):
     quantity: int = Field(gt=0)
     item_total: int = Field(ge=0)
 
+    model_config = ConfigDict(frozen=True)
 
-class CartDetails(BaseModel, frozen=True):
+
+class CartDetails(BaseModel):
     """
     カートの集計結果.
 
@@ -213,13 +215,15 @@ class CartDetails(BaseModel, frozen=True):
     tax: int = Field(ge=0)
     total: int = Field(ge=0)
 
+    model_config = ConfigDict(frozen=True)
+
 
 # ---------------------------------------------------------------------------
 # 注文アイテム / 注文
 # ---------------------------------------------------------------------------
 
 
-class OrderItem(BaseModel, frozen=True):
+class OrderItem(BaseModel):
     """
     注文明細アイテム.
 
@@ -243,8 +247,10 @@ class OrderItem(BaseModel, frozen=True):
     quantity: int = Field(gt=0)
     subtotal: int = Field(ge=0)
 
+    model_config = ConfigDict(frozen=True)
 
-class Order(BaseModel, frozen=True):
+
+class Order(BaseModel):
     """
     注文エンティティ.
 
