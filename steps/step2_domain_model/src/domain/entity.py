@@ -5,6 +5,7 @@ Pydantic BaseModel を使用し、型安全性とバリデーションを提供�
 """
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
@@ -37,7 +38,8 @@ class Product(BaseModel):
     stock: int = Field(ge=0)
 
     def has_enough_stock(self, quantity: int) -> bool:
-        """指定された数量の在庫があるかチェックする.
+        """
+        指定された数量の在庫があるかチェックする.
 
         Parameters
         ----------
@@ -52,7 +54,8 @@ class Product(BaseModel):
         return self.stock >= quantity
 
     def decrease_stock(self, quantity: int) -> None:
-        """在庫を減少させる.
+        """
+        在庫を減少させる.
 
         Parameters
         ----------
@@ -79,7 +82,8 @@ class Product(BaseModel):
 
 
 class CartItem(BaseModel):
-    """カートアイテム.
+    """
+    カートアイテム.
 
     Attributes
     ----------
@@ -94,7 +98,8 @@ class CartItem(BaseModel):
 
 
 class Cart(BaseModel):
-    """カートエンティティ.
+    """
+    カートエンティティ.
 
     Attributes
     ----------
@@ -113,7 +118,8 @@ class Cart(BaseModel):
         return len(self.items) == 0
 
     def add_item(self, product_id: str, quantity: int) -> None:
-        """カートに商品を追加する.
+        """
+        カートに商品を追加する.
 
         既にカートにある商品の場合は数量を加算する。
 
@@ -131,7 +137,8 @@ class Cart(BaseModel):
         self.items.append(CartItem(product_id=product_id, quantity=quantity))
 
     def remove_item(self, product_id: str) -> None:
-        """カートから商品を削除する.
+        """
+        カートから商品を削除する.
 
         Parameters
         ----------
@@ -161,7 +168,8 @@ class Cart(BaseModel):
 
 
 class CartDetailItem(BaseModel, frozen=True):
-    """カート詳細の個別アイテム.
+    """
+    カート詳細の個別アイテム.
 
     Attributes
     ----------
@@ -185,7 +193,8 @@ class CartDetailItem(BaseModel, frozen=True):
 
 
 class CartDetails(BaseModel, frozen=True):
-    """カートの集計結果.
+    """
+    カートの集計結果.
 
     Attributes
     ----------
@@ -211,7 +220,8 @@ class CartDetails(BaseModel, frozen=True):
 
 
 class OrderItem(BaseModel, frozen=True):
-    """注文明細アイテム.
+    """
+    注文明細アイテム.
 
     Attributes
     ----------
@@ -235,7 +245,8 @@ class OrderItem(BaseModel, frozen=True):
 
 
 class Order(BaseModel, frozen=True):
-    """注文エンティティ.
+    """
+    注文エンティティ.
 
     Attributes
     ----------
@@ -272,7 +283,8 @@ class Order(BaseModel, frozen=True):
         *,
         created_at: datetime | None = None,
     ) -> Order:
-        """ドメインルールに基づいて注文を生成する.
+        """
+        ドメインルールに基づいて注文を生成する.
 
         小計・消費税 (10%) ・合計金額を自動計算します。
 
@@ -293,7 +305,7 @@ class Order(BaseModel, frozen=True):
             生成された注文エンティティ。
         """
         if created_at is None:
-            created_at = datetime.now()  # noqa: DTZ005
+            created_at = datetime.now(tz=ZoneInfo("Asia/Tokyo"))
 
         subtotal = sum(item.subtotal for item in items)
         tax = int(subtotal * TAX_RATE)
