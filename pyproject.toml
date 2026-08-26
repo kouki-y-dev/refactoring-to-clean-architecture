@@ -30,6 +30,7 @@ lint-ty = [
     "lint-ty-step1",
     "lint-ty-step2",
     "lint-ty-step3",
+    "lint-ty-step4",
 ]
 lint = ["lint-ruff", "lint-ty"]
 
@@ -37,7 +38,8 @@ test-step0 = "pytest steps/step0_monolith/tests"
 test-step1 = "pytest steps/step1_separate_layers/tests"
 test-step2 = "pytest steps/step2_domain_model/tests"
 test-step3 = "pytest steps/step3_repository/tests"
-test = ["test-step0", "test-step1", "test-step2", "test-step3"]
+test-step4 = "pytest steps/step4_usecase/tests"
+test = ["test-step0", "test-step1", "test-step2", "test-step3", "test-step4"]
 
 check = ["lint", "test"]
 
@@ -56,6 +58,10 @@ env = { PYTHONPATH = "steps/step2_domain_model/src" }
 [tool.poe.tasks.lint-ty-step3]
 cmd = "ty check steps/step3_repository"
 env = { PYTHONPATH = "steps/step3_repository/src" }
+
+[tool.poe.tasks.lint-ty-step4]
+cmd = "ty check steps/step4_usecase"
+env = { PYTHONPATH = "steps/step4_usecase/src" }
 
 [tool.poe.tasks.test-step]
 cmd = "pytest"
