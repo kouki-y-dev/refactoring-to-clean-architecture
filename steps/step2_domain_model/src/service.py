@@ -7,6 +7,7 @@ Step 1 との主な違いは、辞書操作の代わりにドメインモデル�
 
 import data_access
 from domain.entity import (
+    TAX_RATE,
     CartDetailItem,
     CartDetails,
     Order,
@@ -126,8 +127,6 @@ def get_cart_details(user_id: str) -> CartDetails | None:
                 item_total=item_total,
             )
         )
-
-    from domain.entity import TAX_RATE
 
     tax = int(subtotal * TAX_RATE)
     return CartDetails(
